@@ -103,8 +103,18 @@ func processDir(dir string, ch chan resultLogChan) {
 	}
 
 	if !strings.Contains(string(res), gitStatusOk) {
-		resultLogs.AddLog("skipped: there are uncommitted changes")
-		return
+		resultLogs.AddLog("find uncommitted changes")
+
+		if !flagResetHard {
+			resultLogs.AddLog("skipped: there are uncommitted changes")
+			return
+		}
+
+		if _, err := shell_executor.Run(ctx, dir, "git", "reset", "--hard"); err != nil {
+			resultLogs.AddLog("error: git reset --hard: " + err.Error())
+			return
+		}
+		resultLogs.AddLog("success: git reset --hard")
 	}
 
 	if _, err := shell_executor.Run(ctx, dir, "git", "checkout", flagDefaultBranch); err != nil {
@@ -124,4 +134,5 @@ func processDir(dir string, ch chan resultLogChan) {
 		return
 	}
 	resultLogs.AddLog("success: git pull")
+
 }

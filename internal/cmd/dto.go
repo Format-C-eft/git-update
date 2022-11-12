@@ -17,6 +17,7 @@ var (
 	flagCheckout      bool
 	flagFetch         bool
 	flagPull          bool
+	flagResetHard     bool
 	flagDefaultBranch string
 
 	flagExecuteTimeout *time.Duration
