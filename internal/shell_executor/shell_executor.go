@@ -5,8 +5,6 @@ import (
 	"context"
 	"fmt"
 	"os/exec"
-
-	"github.com/pkg/errors"
 )
 
 func Run(ctx context.Context, dir string, cmdline ...string) ([]byte, error) {
@@ -20,7 +18,7 @@ func Run(ctx context.Context, dir string, cmdline ...string) ([]byte, error) {
 	err := cmd.Run()
 
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("%s in %s error: %s", cmdline, dir, stderr.String()))
+		return nil, fmt.Errorf("%s in %s cmd_error: %s err: %w", cmdline, dir, stderr.String(), err)
 	}
 
 	return stdout.Bytes(), nil

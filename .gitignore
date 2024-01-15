@@ -1,8 +1,5 @@
+/bin
+.DS_STORE
 /.idea
 /.vscode
 /.run
-.DS_STORE
-.DS_Store
-
-/bin
-coverage.out
