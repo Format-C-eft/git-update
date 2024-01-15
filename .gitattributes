@@ -1,1 +1,2 @@
-go.sum -diff
+*.sum -diff
+*_gen.go -diff

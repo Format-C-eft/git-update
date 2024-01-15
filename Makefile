@@ -1,21 +1,41 @@
 export GO111MODULE=on
-export GOSUMDB=off
 
-LOCAL_BIN	= $(CURDIR)/bin
-GOBIN		= $(GOPATH)/bin
-GOARCH		= amd64
+ENV_PARAMS ?= CGO_ENABLED=0
+LOCAL_BIN := $(CURDIR)/bin
+LINT_BIN := $(LOCAL_BIN)/golangci-lint
 
-.PHONY: bin-deps
-bin-deps:
-	$(info Installing binary dependencies...)
-	GOBIN=$(LOCAL_BIN) go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.50.1
+.PHONY: deps
+deps:
+	$(info Download dependencies...)
+	go mod download
+
+.PHONY: test
+test:
+	$(info Running test...)
+	go test ./...
 
 .PHONY: .lint
 .lint:
-	$(LOCAL_BIN)/golangci-lint run --config=.golangci.yaml ./...
+	$(info Running lint...)
+	$(LINT_BIN) run --new-from-rev=origin/master --config=.golangci.yaml ./...
 
-.PHONY: lint
-lint: bin-deps .lint
+.PHONY: .lint-full
+.lint-full:
+	$(info Running lint-full...)
+	$(LINT_BIN) run --config=.golangci.yaml ./...
+
+.PHONY:  lint
+lint: install-lint .lint
+
+.PHONY: lint-full
+lint-full: install-lint .lint-full
+
+LINT_TAG ?= 1.55.2
+install-lint: export GOBIN := $(LOCAL_BIN)
+install-lint:
+	$(info Installing golangci-lint v$(LINT_TAG))
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v$(LINT_TAG)
+	go mod tidy
 
 .PHONY: build
 build: build-linux build-darwin
@@ -29,11 +49,3 @@ build-linux:
 build-darwin:
 	go mod download && CGO_ENABLED=0 \
 	GOOS=darwin GOARCH=${GOARCH} go build -o ${LOCAL_BIN}/git-update-darwin-${GOARCH} ./cmd/main.go;
-
-.PHONY: test
-test:
-	go test ./... -count=1 -timeout=60s -v -short
-
-.PHONY: install
-install:
-	go build -o $(GOBIN)/protogen -ldflags "$(LDFLAGS)" $(CURDIR)/cmd

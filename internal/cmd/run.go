@@ -2,12 +2,12 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
 	"sync"
 
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
 	"github.com/Format-C-eft/git-update/internal/shell_executor"
@@ -34,7 +34,7 @@ func cmdRun(_ *cobra.Command, _ []string) error {
 
 	listDir, err := getListOfDirectories()
 	if err != nil {
-		return errors.Wrap(err, "getListOfDirectories")
+		return fmt.Errorf("getListOfDirectories err: %w", err)
 	}
 
 	if len(listDir) == 0 {
@@ -55,7 +55,7 @@ func cmdRun(_ *cobra.Command, _ []string) error {
 func getListOfDirectories() ([]string, error) {
 	list, err := os.ReadDir(flagDir)
 	if err != nil {
-		return nil, errors.Wrap(err, "os.ReadDir")
+		return nil, fmt.Errorf("os.ReadDir err: %w", err)
 	}
 
 	listDir := make([]string, 0, len(list))
