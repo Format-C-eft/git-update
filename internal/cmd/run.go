@@ -123,7 +123,7 @@ func processDir(dir string, ch chan resultLogChan) {
 	}
 	resultLogs.AddLog("success: git checkout")
 
-	if _, err := shell_executor.Run(ctx, dir, "git", "fetch", "--prune"); err != nil {
+	if _, err := shell_executor.Run(ctx, dir, "git", "fetch", "--prune", "--prune-tags"); err != nil {
 		resultLogs.AddLog("error: git fetch: " + err.Error())
 		return
 	}
