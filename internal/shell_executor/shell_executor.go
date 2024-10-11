@@ -5,9 +5,12 @@ import (
 	"context"
 	"fmt"
 	"os/exec"
+	"regexp"
 )
 
-func Run(ctx context.Context, dir string, cmdline ...string) ([]byte, error) {
+var regexpLineBreaks = regexp.MustCompile(`\r?\n`)
+
+func Run(ctx context.Context, dir string, cmdline ...string) (string, error) {
 	var stderr, stdout bytes.Buffer
 
 	cmd := exec.CommandContext(ctx, cmdline[0], cmdline[1:]...)
@@ -15,11 +18,25 @@ func Run(ctx context.Context, dir string, cmdline ...string) ([]byte, error) {
 	cmd.Stderr = &stderr
 	cmd.Stdout = &stdout
 
-	err := cmd.Run()
-
+	err := cmd.Start()
 	if err != nil {
-		return nil, fmt.Errorf("%s in %s cmd_error: %s err: %w", cmdline, dir, stderr.String(), err)
+		return "", fmt.Errorf("%s in %s cmd_error: %s err: %w",
+			cmdline,
+			dir,
+			string(regexpLineBreaks.ReplaceAll(stderr.Bytes(), []byte(" "))),
+			err,
+		)
 	}
 
-	return stdout.Bytes(), nil
+	err = cmd.Wait()
+	if err != nil {
+		return "", fmt.Errorf("%s in %s cmd_error: %s err: %w",
+			cmdline,
+			dir,
+			string(regexpLineBreaks.ReplaceAll(stderr.Bytes(), []byte(" "))),
+			err,
+		)
+	}
+
+	return string(regexpLineBreaks.ReplaceAll(stdout.Bytes(), []byte(" "))), nil
 }
