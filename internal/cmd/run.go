@@ -6,29 +6,29 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"sync"
+	"sync/atomic"
+	"time"
 
-	"github.com/spf13/cobra"
-
+	"github.com/Format-C-eft/git-update/internal/config"
 	"github.com/Format-C-eft/git-update/internal/shell_executor"
 )
 
-func cmdRun(_ *cobra.Command, _ []string) error {
-	if flagDir == "" {
+func Run() error {
+	if config.FlagDir == "" {
 		return errors.New("empty path to directory")
 	}
 
-	if !strings.HasSuffix(flagDir, string(os.PathSeparator)) {
-		flagDir = flagDir + string(os.PathSeparator)
+	if !strings.HasSuffix(config.FlagDir, string(os.PathSeparator)) {
+		config.FlagDir += string(os.PathSeparator)
 	}
 
-	if flagAll {
-		flagCheckout = true
-		flagFetch = true
-		flagPull = true
+	if config.FlagAll {
+		config.FlagCheckout = true
+		config.FlagFetch = true
+		config.FlagPull = true
 	}
 
-	if !flagCheckout && !flagFetch && !flagPull {
+	if !config.FlagCheckout && !config.FlagFetch && !config.FlagPull {
 		return errors.New("all actions are disabled")
 	}
 
@@ -41,19 +41,38 @@ func cmdRun(_ *cobra.Command, _ []string) error {
 		return errors.New("directory does not contain subdirectories")
 	}
 
-	ch := make(chan resultLogChan, len(listDir))
+	ch := make(chan resultLog, len(listDir))
+	defer close(ch)
 
-	go runProcess(listDir, ch)
-
-	for logChan := range ch {
-		fmt.Println(logChan.String())
+	for _, dir := range listDir {
+		go processDir(dir, ch)
 	}
 
-	return nil
+	execTimeout := *config.FlagExecuteTimeout
+	execTimeout = time.Duration(int64(len(listDir)) * execTimeout.Nanoseconds())
+
+	ctx, cancel := context.WithTimeout(context.Background(), execTimeout)
+	defer cancel()
+
+	var countDone atomic.Int32
+	var countAll = int32(len(listDir))
+
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case logChan := <-ch:
+			fmt.Println(logChan.String())
+			fmt.Println("--------------------------------------------------------------------")
+			if newValue := countDone.Add(1); newValue >= countAll {
+				return nil
+			}
+		}
+	}
 }
 
 func getListOfDirectories() ([]string, error) {
-	list, err := os.ReadDir(flagDir)
+	list, err := os.ReadDir(config.FlagDir)
 	if err != nil {
 		return nil, fmt.Errorf("os.ReadDir err: %w", err)
 	}
@@ -61,78 +80,74 @@ func getListOfDirectories() ([]string, error) {
 	listDir := make([]string, 0, len(list))
 	for _, path := range list {
 		if path.IsDir() {
-
-			listDir = append(listDir, fmt.Sprintf("%s%s", flagDir, path.Name()))
+			listDir = append(listDir, fmt.Sprintf("%s%s", config.FlagDir, path.Name()))
 		}
 	}
 
 	return listDir, nil
 }
 
-func runProcess(listDir []string, ch chan resultLogChan) {
-	defer close(ch)
-
-	wg := &sync.WaitGroup{}
-	for _, dir := range listDir {
-		wg.Add(1)
-		go func(dir string) {
-			defer wg.Done()
-			processDir(dir, ch)
-		}(dir)
-	}
-
-	wg.Wait()
-}
-
-func processDir(dir string, ch chan resultLogChan) {
-	resultLogs := resultLogChan{dir: dir}
-	resultLogs.AddLog("start processing")
+func processDir(dir string, ch chan resultLog) {
+	resultLogs := resultLog{dir: dir}
+	resultLogs.AddLog("start processing", "")
 
 	defer func() {
-		resultLogs.AddLog("stop processing")
+		resultLogs.AddLog("stop processing", "")
 		ch <- resultLogs
 	}()
 
-	ctx, cancelFn := context.WithTimeout(context.Background(), *flagExecuteTimeout)
+	ctx, cancelFn := context.WithTimeout(context.Background(), *config.FlagExecuteTimeout)
 	defer cancelFn()
 
 	res, errRun := shell_executor.Run(ctx, dir, "git", "status")
 	if errRun != nil {
-		resultLogs.AddLog("skipped: error: execute git status")
+		resultLogs.AddLog("skipped: error: execute git status", errRun.Error())
 		return
 	}
 
-	if !strings.Contains(string(res), gitStatusOk) {
-		resultLogs.AddLog("find uncommitted changes")
+	if !strings.Contains(res, gitStatusOk) {
+		resultLogs.AddLog("find uncommitted changes", "")
 
-		if !flagResetHard {
-			resultLogs.AddLog("skipped: there are uncommitted changes")
+		if !config.FlagResetHard {
+			resultLogs.AddLog("skipped: there are uncommitted changes", "")
+			return
+		}
+		result, err := shell_executor.Run(ctx, dir, "git", "reset", "--hard")
+		if err != nil {
+			resultLogs.AddLog("error: git reset --hard", err.Error())
 			return
 		}
 
-		if _, err := shell_executor.Run(ctx, dir, "git", "reset", "--hard"); err != nil {
-			resultLogs.AddLog("error: git reset --hard: " + err.Error())
+		resultLogs.AddLog("success: git reset --hard", result)
+	}
+
+	if config.FlagCheckout {
+		result, err := shell_executor.Run(ctx, dir, "git", "checkout", config.FlagDefaultBranch)
+		if err != nil {
+			resultLogs.AddLog("error: git checkout", err.Error())
 			return
 		}
-		resultLogs.AddLog("success: git reset --hard")
+
+		resultLogs.AddLog("success: git checkout", result)
 	}
 
-	if _, err := shell_executor.Run(ctx, dir, "git", "checkout", flagDefaultBranch); err != nil {
-		resultLogs.AddLog("error: git checkout: " + err.Error())
-		return
-	}
-	resultLogs.AddLog("success: git checkout")
+	if config.FlagFetch {
+		result, err := shell_executor.Run(ctx, dir, "git", "fetch", "--prune", "--prune-tags")
+		if err != nil {
+			resultLogs.AddLog("error: git fetch", err.Error())
+			return
+		}
 
-	if _, err := shell_executor.Run(ctx, dir, "git", "fetch", "--prune", "--prune-tags"); err != nil {
-		resultLogs.AddLog("error: git fetch: " + err.Error())
-		return
+		resultLogs.AddLog("success: git fetch", result)
 	}
-	resultLogs.AddLog("success: git fetch")
 
-	if _, err := shell_executor.Run(ctx, dir, "git", "pull"); err != nil {
-		resultLogs.AddLog("error: git pull: " + err.Error())
-		return
+	if config.FlagPull {
+		result, err := shell_executor.Run(ctx, dir, "git", "pull")
+		if err != nil {
+			resultLogs.AddLog("error: git pull ", err.Error())
+			return
+		}
+
+		resultLogs.AddLog("success: git pull ", result)
 	}
-	resultLogs.AddLog("success: git pull")
-
 }

@@ -4,27 +4,17 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/Format-C-eft/git-update/internal/config"
 )
 
 const (
-	LayoutDateFormat = "15:04:05.999"
+	layoutDateFormat = "15:04:05.999"
 	gitStatusOk      = "nothing to commit, working tree clean"
 )
 
-var (
-	flagDir           string
-	flagAll           bool
-	flagCheckout      bool
-	flagFetch         bool
-	flagPull          bool
-	flagResetHard     bool
-	flagDefaultBranch string
-
-	flagExecuteTimeout *time.Duration
-)
-
 type (
-	resultLogChan struct {
+	resultLog struct {
 		dir  string
 		logs []logs
 	}
@@ -35,19 +25,26 @@ type (
 	}
 )
 
-func (r *resultLogChan) AddLog(message string) {
+func (r *resultLog) AddLog(message string, verboseMessage string) {
 	r.logs = append(r.logs, logs{
 		Time:     time.Now(),
 		messages: message,
 	})
+
+	if verboseMessage != "" && config.FlagVerbose {
+		r.logs = append(r.logs, logs{
+			Time:     time.Now(),
+			messages: "verbose: " + verboseMessage,
+		})
+	}
 }
 
-func (r *resultLogChan) String() string {
+func (r *resultLog) String() string {
 	result := make([]string, 0, len(r.logs))
 	for _, l := range r.logs {
 		result = append(result, fmt.Sprintf(
 			"%s: %s: %s",
-			l.Time.Format(LayoutDateFormat),
+			l.Time.Format(layoutDateFormat),
 			r.dir,
 			l.messages,
 		),
