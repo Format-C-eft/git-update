@@ -54,8 +54,10 @@ func Run() error {
 	ctx, cancel := context.WithTimeout(context.Background(), execTimeout)
 	defer cancel()
 
-	var countDone atomic.Int32
-	var countAll = int32(len(listDir))
+	var (
+		countDone atomic.Int32
+		countAll  = int32(len(listDir))
+	)
 
 	for {
 		select {
@@ -64,6 +66,7 @@ func Run() error {
 		case logChan := <-ch:
 			fmt.Println(logChan.String())
 			fmt.Println("--------------------------------------------------------------------")
+
 			if newValue := countDone.Add(1); newValue >= countAll {
 				return nil
 			}
@@ -93,6 +96,7 @@ func processDir(dir string, ch chan resultLog) {
 
 	defer func() {
 		resultLogs.AddLog("stop processing", "")
+
 		ch <- resultLogs
 	}()
 
@@ -112,6 +116,7 @@ func processDir(dir string, ch chan resultLog) {
 			resultLogs.AddLog("skipped: there are uncommitted changes", "")
 			return
 		}
+
 		result, err := shell_executor.Run(ctx, dir, "git", "reset", "--hard")
 		if err != nil {
 			resultLogs.AddLog("error: git reset --hard", err.Error())
