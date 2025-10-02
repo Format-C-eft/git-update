@@ -1,55 +1,81 @@
-# More info on config here: https://golangci-lint.run/usage/configuration/#config-file
+version: "2"
 run:
   concurrency: 8
-  timeout: 10m
   issues-exit-code: 1
   tests: true
-
-output:
-  formats:
-    - format: colored-line-number
-  print-issued-lines: true
-  print-linter-name: true
-
-linters-settings:
-  govet:
-    enable:
-      - shadow
-  dupl:
-    threshold: 100
-  goconst:
-    min-len:         2
-    min-occurrences: 2
-
 linters:
-  disable-all: true
+  default: none
   enable:
+    - dupl
+    - durationcheck
+    - errorlint
     - errcheck
     - goconst
-    - goimports
     - gosec
-    - gosimple
     - govet
     - ineffassign
     - revive
     - staticcheck
     - unused
-
-issues:
-  exclude-dirs:
-    - bin
-    - vendor
-    - var
-    - tmp
-    - .cache
-  exclude-use-default: false
-  exclude:
-    - G104
-    - G115
-    - G204
-    - should have a package comment
-    - should have comment or be unexported
-    - comment on exported const
-    - should have comment \(or a comment on this block\)
-    - don't use an underscore in package name
-    - package-comments
+    - wsl_v5
+  settings:
+    dupl:
+      threshold: 100
+    goconst:
+      min-len: 2
+      min-occurrences: 2
+    govet:
+      enable:
+        - shadow
+    wsl_v5:
+      enable:
+        - assign
+        - branch
+        - decl
+        - defer
+        - expr
+        - for
+        - go
+        - if
+        - inc-dec
+        - label
+        - range
+        - return
+        - select
+        - switch
+        - type-switch
+        - append
+        - assign-expr
+        - err
+        - leading-whitespace
+        - trailing-whitespace
+  exclusions:
+    generated: lax
+    rules:
+      - path: (.+)\.go$
+        text: G104
+      - path: (.+)\.go$
+        text: G115
+      - path: (.+)\.go$
+        text: G204
+      - path: (.+)\.go$
+        text: should have a package comment
+      - path: (.+)\.go$
+        text: should have comment or be unexported
+      - path: (.+)\.go$
+        text: comment on exported const
+      - path: (.+)\.go$
+        text: should have comment \(or a comment on this block\)
+      - path: (.+)\.go$
+        text: don't use an underscore in package name
+      - path: (.+)\.go$
+        text: package-comments
+    paths:
+      - bin
+      - vendor
+      - var
+      - tmp
+      - .cache
+      - third_party$
+      - builtin$
+      - examples$

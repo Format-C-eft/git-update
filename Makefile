@@ -10,7 +10,7 @@ CURDIR_ESCAPE:=$(subst $(space),\ ,$(CURDIR))
 
 LOCAL_BIN:=$(CURDIR_ESCAPE)/bin
 LINT_BIN:=$(LOCAL_BIN)/golangci-lint
-LINT_VERSION:=1.60.3
+LINT_VERSION:=2.5.0
 
 ###### TEST ######
 .PHONY: test
@@ -23,12 +23,11 @@ test:
 install-lint:
 ifeq ($(wildcard $(LINT_BIN)),)
 	$(info Installing golangci-lint v$(LINT_VERSION))
-	GOBIN=$(LOCAL_BIN) go install github.com/golangci/golangci-lint/cmd/golangci-lint@v$(LINT_VERSION)
+	GOBIN=$(LOCAL_BIN) go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v$(LINT_VERSION)
 # Устанавливаем текущий путь для исполняемого файла линтера.
 else
 	$(info Golangci-lint is already installed to $(LINT_VERSION))
 endif
-
 
 PHONY: lint
 lint: install-lint

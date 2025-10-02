@@ -50,5 +50,6 @@ func (r *resultLog) String() string {
 		),
 		)
 	}
+
 	return strings.Join(result, "\n")
 }
