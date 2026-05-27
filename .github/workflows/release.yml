@@ -1,0 +1,98 @@
+name: release
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    name: verify
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6.0.2
+
+      - name: Install Go
+        uses: actions/setup-go@v6.4.0
+        with:
+          go-version-file: go.mod
+          check-latest: true
+          cache: true
+          cache-dependency-path: go.sum
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v9.2.1
+        with:
+          version: v2.12.2
+          args: --config=.golangci.yml ./...
+
+      - name: Test
+        shell: bash
+        run: make test
+
+      - name: Build
+        shell: bash
+        run: make build
+
+  release:
+    name: release
+    if: github.ref == 'refs/heads/master'
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6.0.2
+        with:
+          fetch-depth: 0
+
+      - name: Install Go
+        uses: actions/setup-go@v6.4.0
+        with:
+          go-version-file: go.mod
+          check-latest: true
+          cache: true
+          cache-dependency-path: go.sum
+
+      - name: Prepare release version
+        id: version
+        shell: bash
+        run: |
+          tag="v0.1.${GITHUB_RUN_NUMBER}"
+          echo "tag=${tag}" >> "${GITHUB_OUTPUT}"
+
+      - name: Build release assets
+        shell: bash
+        run: |
+          mkdir -p dist
+
+          build_time="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          commit_hash="${GITHUB_SHA::7}"
+          ldflags="-X 'github.com/Format-C-eft/git-update/internal/config.branch=${GITHUB_REF_NAME}' -X 'github.com/Format-C-eft/git-update/internal/config.commitHash=${commit_hash}' -X 'github.com/Format-C-eft/git-update/internal/config.timeBuild=${build_time}'"
+
+          for target in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64; do
+            goos="${target%/*}"
+            goarch="${target#*/}"
+            output="dist/git-update-${goos}-${goarch}"
+
+            CGO_ENABLED=0 GOOS="${goos}" GOARCH="${goarch}" \
+              go build -ldflags "${ldflags}" -o "${output}" ./cmd/git-update
+          done
+
+          sha256sum dist/* > dist/checksums.txt
+
+      - name: Create GitHub Release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ steps.version.outputs.tag }}" \
+            dist/* \
+            --target "${GITHUB_SHA}" \
+            --generate-notes \
+            --fail-on-no-commits

@@ -13,6 +13,7 @@ var regexpLineBreaks = regexp.MustCompile(`\r?\n`)
 func Run(ctx context.Context, dir string, cmdline ...string) (string, error) {
 	var stderr, stdout bytes.Buffer
 
+	//nolint:gosec // Commands are passed as exec arguments without shell expansion.
 	cmd := exec.CommandContext(ctx, cmdline[0], cmdline[1:]...)
 	cmd.Dir = dir
 	cmd.Stderr = &stderr

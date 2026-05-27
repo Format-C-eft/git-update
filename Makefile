@@ -10,7 +10,8 @@ CURDIR_ESCAPE:=$(subst $(space),\ ,$(CURDIR))
 
 LOCAL_BIN:=$(CURDIR_ESCAPE)/bin
 LINT_BIN:=$(LOCAL_BIN)/golangci-lint
-LINT_VERSION:=2.5.0
+LINT_VERSION:=2.12.2
+INSTALLED_LINT_VERSION:=$(shell if [ -x "$(LINT_BIN)" ]; then "$(LINT_BIN)" version 2>/dev/null | sed -E 's/.* version ([^ ]+) .*/\1/'; fi)
 
 ###### TEST ######
 .PHONY: test
@@ -21,15 +22,15 @@ test:
 ###### LINT ######
 .PHONY: install-lint
 install-lint:
-ifeq ($(wildcard $(LINT_BIN)),)
+ifneq ("$(INSTALLED_LINT_VERSION)","$(LINT_VERSION)")
 	$(info Installing golangci-lint v$(LINT_VERSION))
 	GOBIN=$(LOCAL_BIN) go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v$(LINT_VERSION)
 # Устанавливаем текущий путь для исполняемого файла линтера.
 else
-	$(info Golangci-lint is already installed to $(LINT_VERSION))
+	$(info Golangci-lint v$(LINT_VERSION) is already installed)
 endif
 
-PHONY: lint
+.PHONY: lint
 lint: install-lint
 	$(info Running lint against changed files...)
 	$(LINT_BIN) run \
@@ -37,7 +38,7 @@ lint: install-lint
 		--config=.golangci.yml \
 		./...
 
-PHONY: lint-full
+.PHONY: lint-full
 lint-full: install-lint
 	$(info Running lint against all project files...)
 	$(LINT_BIN) run \

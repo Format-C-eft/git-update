@@ -1,6 +1,7 @@
+GO_MIN_VERSION:=1.26
 GO_VERSION_SHORT:=$(shell echo `go version` | sed -E 's/.* go(.*) .*/\1/g')
-ifneq ("1.23","$(shell printf "$(GO_VERSION_SHORT)\n1.23" | sort -V | head -1)")
-	$(error NEED GO VERSION >= 1.23. Found: $(GO_VERSION_SHORT))
+ifneq ("$(GO_MIN_VERSION)","$(shell printf "$(GO_VERSION_SHORT)\n$(GO_MIN_VERSION)" | sort -V | head -1)")
+	$(error NEED GO VERSION >= $(GO_MIN_VERSION). Found: $(GO_VERSION_SHORT))
 endif
 
 ##################### PROJECT RELATED VARIABLES #####################

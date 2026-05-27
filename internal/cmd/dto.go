@@ -10,7 +10,6 @@ import (
 
 const (
 	layoutDateFormat = "15:04:05.999"
-	gitStatusOk      = "nothing to commit, working tree clean"
 )
 
 type (
