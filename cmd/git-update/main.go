@@ -24,8 +24,11 @@ func main() {
 }
 
 func showVersion() {
-	fmt.Printf("Name - '%s'\n", config.GetVersion().Name)
-	fmt.Printf("Branch - '%s'\n", config.GetVersion().Branch)
-	fmt.Printf("Commit hash - '%s'\n", config.GetVersion().CommitHash)
-	fmt.Printf("Time build - '%s'\n", config.GetVersion().TimeBuild)
+	version := config.GetVersion()
+
+	fmt.Printf("Name - '%s'\n", version.Name)
+	fmt.Printf("Version - '%s'\n", version.Version)
+	fmt.Printf("Branch - '%s'\n", version.Branch)
+	fmt.Printf("Commit hash - '%s'\n", version.CommitHash)
+	fmt.Printf("Time build - '%s'\n", version.TimeBuild)
 }
