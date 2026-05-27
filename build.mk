@@ -18,7 +18,12 @@ ifndef BUILD_TS
 	BUILD_TS:=$(shell date +%FT%T%z)
 endif
 
-LDFLAGS = -X 'github.com/Format-C-eft/git-update/internal/config.branch=$(GIT_BRANCH)'\
+ifndef VERSION
+	VERSION:=$(shell git describe --tags --dirty --always 2> /dev/null || echo "-")
+endif
+
+LDFLAGS = -X 'github.com/Format-C-eft/git-update/internal/config.version=$(VERSION)'\
+          -X 'github.com/Format-C-eft/git-update/internal/config.branch=$(GIT_BRANCH)'\
           -X 'github.com/Format-C-eft/git-update/internal/config.commitHash=$(GIT_HASH)'\
           -X 'github.com/Format-C-eft/git-update/internal/config.timeBuild=$(BUILD_TS)'
 
