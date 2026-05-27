@@ -14,8 +14,9 @@ var (
 	FlagResetHard     bool
 	FlagDefaultBranch string
 	FlagVerbose       bool
+	FlagParallel      int
 
-	FlagExecuteTimeout *time.Duration
+	FlagExecuteTimeout time.Duration
 
 	FlagVersion bool
 )
@@ -30,10 +31,13 @@ func init() {
 	flag.BoolVar(&FlagPull, "pull", false, "Выполнить pull")
 	flag.BoolVar(&FlagResetHard, "reset-hard", false, "При необходимости перед git checkout выполнить git reset --hard")
 	flag.BoolVar(&FlagVerbose, "verbose", false, "Выводить результат выполнения команд")
+	flag.IntVar(&FlagParallel, "parallel", 4, "Максимальное число одновременно обрабатываемых каталогов")
 
-	FlagExecuteTimeout = flag.Duration("execute_timeout", time.Second*30, "Максимальное время обработки одного каталога")
+	flag.DurationVar(&FlagExecuteTimeout, "execute_timeout", time.Second*30, "Максимальное время обработки одного каталога")
 
 	flag.BoolVar(&FlagVersion, "version", false, "Показать версию приложения")
+}
 
+func ParseFlags() {
 	flag.Parse()
 }

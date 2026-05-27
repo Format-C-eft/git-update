@@ -2,20 +2,24 @@ package main
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/Format-C-eft/git-update/internal/cmd"
 	"github.com/Format-C-eft/git-update/internal/config"
 )
 
 func main() {
+	config.ParseFlags()
+
 	if config.FlagVersion {
 		showVersion()
 		return
 	}
 
 	if errRun := cmd.Run(); errRun != nil {
-		fmt.Println(errRun.Error())
-		return
+		_, _ = fmt.Fprintln(os.Stderr, errRun.Error())
+
+		os.Exit(1)
 	}
 }
 

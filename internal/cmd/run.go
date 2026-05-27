@@ -32,6 +32,10 @@ func Run() error {
 		return errors.New("all actions are disabled")
 	}
 
+	if config.FlagParallel < 1 {
+		return errors.New("parallel must be greater than zero")
+	}
+
 	listDir, err := getListOfDirectories()
 	if err != nil {
 		return fmt.Errorf("getListOfDirectories err: %w", err)
@@ -44,19 +48,26 @@ func Run() error {
 	ch := make(chan resultLog, len(listDir))
 	defer close(ch)
 
+	sem := make(chan struct{}, config.FlagParallel)
+
 	for _, dir := range listDir {
-		go processDir(dir, ch)
+		go func(dir string) {
+			sem <- struct{}{}
+			defer func() { <-sem }()
+
+			processDir(dir, ch)
+		}(dir)
 	}
 
-	execTimeout := *config.FlagExecuteTimeout
+	execTimeout := config.FlagExecuteTimeout
 	execTimeout = time.Duration(int64(len(listDir)) * execTimeout.Nanoseconds())
 
 	ctx, cancel := context.WithTimeout(context.Background(), execTimeout)
 	defer cancel()
 
 	var (
-		countDone atomic.Int32
-		countAll  = int32(len(listDir))
+		countDone atomic.Int64
+		countAll  = int64(len(listDir))
 	)
 
 	for {
@@ -100,16 +111,16 @@ func processDir(dir string, ch chan resultLog) {
 		ch <- resultLogs
 	}()
 
-	ctx, cancelFn := context.WithTimeout(context.Background(), *config.FlagExecuteTimeout)
+	ctx, cancelFn := context.WithTimeout(context.Background(), config.FlagExecuteTimeout)
 	defer cancelFn()
 
-	res, errRun := shell_executor.Run(ctx, dir, "git", "status")
+	res, errRun := shell_executor.Run(ctx, dir, "git", "status", "--porcelain=v1")
 	if errRun != nil {
-		resultLogs.AddLog("skipped: error: execute git status", errRun.Error())
+		resultLogs.AddLog("skipped: error: execute git status --porcelain=v1", errRun.Error())
 		return
 	}
 
-	if !strings.Contains(res, gitStatusOk) {
+	if strings.TrimSpace(res) != "" {
 		resultLogs.AddLog("find uncommitted changes", "")
 
 		if !config.FlagResetHard {
@@ -147,12 +158,12 @@ func processDir(dir string, ch chan resultLog) {
 	}
 
 	if config.FlagPull {
-		result, err := shell_executor.Run(ctx, dir, "git", "pull")
+		result, err := shell_executor.Run(ctx, dir, "git", "pull", "--ff-only")
 		if err != nil {
-			resultLogs.AddLog("error: git pull ", err.Error())
+			resultLogs.AddLog("error: git pull --ff-only", err.Error())
 			return
 		}
 
-		resultLogs.AddLog("success: git pull ", result)
+		resultLogs.AddLog("success: git pull --ff-only", result)
 	}
 }

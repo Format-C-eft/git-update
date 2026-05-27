@@ -6,27 +6,40 @@ run:
 linters:
   default: none
   enable:
-    - dupl
-    - durationcheck
+    - copyloopvar
     - errorlint
     - errcheck
     - goconst
+    - gocritic
     - gosec
     - govet
     - ineffassign
+    - nilerr
+    - nilnil
+    - nolintlint
     - revive
     - staticcheck
+    - unconvert
     - unused
     - wsl_v5
   settings:
-    dupl:
-      threshold: 100
     goconst:
       min-len: 2
       min-occurrences: 2
     govet:
       enable:
         - shadow
+    nolintlint:
+      require-explanation: true
+      require-specific: true
+    revive:
+      rules:
+        - name: exported
+          disabled: true
+        - name: package-comments
+          disabled: true
+        - name: var-naming
+          disabled: true
     wsl_v5:
       enable:
         - assign
@@ -51,25 +64,6 @@ linters:
         - trailing-whitespace
   exclusions:
     generated: lax
-    rules:
-      - path: (.+)\.go$
-        text: G104
-      - path: (.+)\.go$
-        text: G115
-      - path: (.+)\.go$
-        text: G204
-      - path: (.+)\.go$
-        text: should have a package comment
-      - path: (.+)\.go$
-        text: should have comment or be unexported
-      - path: (.+)\.go$
-        text: comment on exported const
-      - path: (.+)\.go$
-        text: should have comment \(or a comment on this block\)
-      - path: (.+)\.go$
-        text: don't use an underscore in package name
-      - path: (.+)\.go$
-        text: package-comments
     paths:
       - bin
       - vendor

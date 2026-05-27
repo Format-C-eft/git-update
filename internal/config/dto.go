@@ -4,9 +4,9 @@ const AppName = "git-update"
 
 // Build information -ldflags .
 var (
-	branch     = "dev" //nolint
-	commitHash = "-"   //nolint
-	timeBuild  = "-"   //nolint
+	branch     = "dev"
+	commitHash = "-"
+	timeBuild  = "-"
 )
 
 type Version struct {
