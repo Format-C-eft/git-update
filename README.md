@@ -43,6 +43,18 @@
 - Установленный `git`.
 - macOS или Linux. Windows не является основной целевой платформой и отдельно не проверялась.
 
+## Установка Через Go Install
+
+Если Go уже установлен, утилиту можно поставить напрямую из репозитория:
+
+```bash
+go install github.com/Format-C-eft/git-update/cmd/git-update@latest
+```
+
+После установки бинарный файл `git-update` появится в `GOBIN`, а если `GOBIN` не задан - в `GOPATH/bin`.
+
+Путь включает `/cmd/git-update`, потому что исполняемый `main`-пакет находится в каталоге `cmd/git-update`.
+
 ## Сборка
 
 ```bash
